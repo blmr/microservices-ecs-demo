@@ -116,9 +116,11 @@ echo "ECS_LOGLEVEL=warn" >> /etc/ecs/ecs.config
     ```
 
   4. Click Configure ELB > Chose Classic ELB
-
-    # Select  "EcsServiceLoadBalancer"
-    # Select IAM role for service "EcsServiceRole"
+    
+    ```
+    Select  "EcsServiceLoadBalancer"
+    Select IAM role for service "EcsServiceRole"
+    ```
     
   5. Click Save > click Create Service
 
