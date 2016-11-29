@@ -95,10 +95,12 @@ echo "ECS_LOGLEVEL=warn" >> /etc/ecs/ecs.config
   4. Assign "EcsServiceElbSecurityGroup" to the ELB
   5. Skip Security Configuration
   6. Configure Health Check:
-
+  
+    ```
     Ping Protocol: HTTP
     Ping Port: 8080
     Ping Path: /
+    ```
     
   7. On the next page choose your ECS instances you have created earlier.
 
@@ -106,16 +108,18 @@ echo "ECS_LOGLEVEL=warn" >> /etc/ecs/ecs.config
   1. Open "EcsClusterDemo" under EC2 Container Service Console
   2. Click Create under Services tab
   3. Choose
-
+    
+    ```
     Task Definition: EcsTaskDefinitionDemo:1
     Service name: NginxContainer
     Number of tasks: 1
+    ```
 
   4. Click Configure ELB > Chose Classic ELB
 
-    Select  "EcsServiceLoadBalancer"
-
-    Select IAM role for service "EcsServiceRole"
+    # Select  "EcsServiceLoadBalancer"
+    # Select IAM role for service "EcsServiceRole"
+    
   5. Click Save > click Create Service
 
 Open _NginxContainer_ service. Check if _Running tasks = 1_.
