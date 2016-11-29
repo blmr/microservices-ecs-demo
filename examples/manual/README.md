@@ -1,5 +1,5 @@
 # 1. Create ECS Cluster
-In AWS Console go to EC2 Container Service, click _Create Cluster_ and call it "EcsClusterDemo"
+In AWS Console go to EC2 Container Service, click _Create Cluster_, call it "EcsClusterDemo" and chose "Create an Empty Cluster"
 
 # 2. Add ECS instance to the ECS Cluster
 
@@ -33,6 +33,7 @@ echo "ECS_LOGLEVEL=warn" >> /etc/ecs/ecs.config
 # 3. Create ECS Task Definition
   1. In EC2 Container Service go to Task Definitions tab and click _Create new Task Definition_
   2. Name it "EcsTaskDefinitionDemo", click _Configure via JSON_ and copy-paste next configuration:
+  
   ```
   {
     "containerDefinitions": [
