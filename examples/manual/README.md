@@ -99,6 +99,7 @@ echo "ECS_LOGLEVEL=warn" >> /etc/ecs/ecs.config
     Ping Protocol: HTTP
     Ping Port: 8080
     Ping Path: /
+    
   7. On the next page choose your ECS instances you have created earlier.
 
 # 5. Create ECS Service
@@ -118,6 +119,9 @@ echo "ECS_LOGLEVEL=warn" >> /etc/ecs/ecs.config
   5. Click Save > click Create Service
 
 Open _NginxContainer_ service. Check if _Running tasks = 1_.
+
 Now go to load balancer and check if it has 1 instance "inService" under _Instances_ tab. If not, add it manually via "Edit Instances"
+
 Finally, find ELB dns name under Description and open it in browser.
+
 You should see **"Welcome to nginx!"**
