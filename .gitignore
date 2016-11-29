@@ -1,0 +1,9 @@
+examples/cloudformation/scripts/automation-role.json
+examples/cloudformation/scripts/cformation-access-keys.json
+examples/cloudformation/scripts/cformation-eips.json
+examples/cloudformation/scripts/cformation-ssh-key.json
+examples/cloudformation/scripts/cloud-formation-parameters.json
+examples/cloudformation/scripts/stack.err
+examples/cloudformation/scripts/stack.json
+examples/cloudformation/scripts/stack_events.err
+examples/cloudformation/scripts/stack_events.json

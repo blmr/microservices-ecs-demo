@@ -1,0 +1,191 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "ecs-shared",
+    "Resources": {
+        "EcsServicePolicy": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ecs.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole"
+                ]
+            }
+        },
+        "EcsInstanceRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role",
+                    "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+                    "arn:aws:iam::aws:policy/AmazonESFullAccess",
+                    "arn:aws:iam::aws:policy/CloudWatchFullAccess"
+                ]
+            }
+        },
+        "EcsInstanceEc2Policies": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "EcsInstanceEc2Policy",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "ec2:DescribeInstances",
+                                "ec2:DescribeVpcs",
+                                "ec2:DescribeTags",
+                                "cloudformation:DescribeStackResources",
+                                "cloudformation:ListStackResources",
+                                "cloudwatch:PutMetricData",
+                                "cloudwatch:GetMetricStatistics",
+                                "cloudwatch:ListMetrics",
+                                "logs:CreateLogGroup",
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents",
+                                "logs:DescribeLogStreams"
+                            ],
+                            "Resource": "*"
+                        }
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "EcsInstanceRole"
+                    }
+                ]
+            }
+        },
+        "EcsInstanceEcrAccessPolicies": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "EcsInstanceEcrAccessPolicy",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "ecr:BatchCheckLayerAvailability",
+                                "ecr:BatchGetImage",
+                                "ecr:GetDownloadUrlForLayer",
+                                "ecr:GetAuthorizationToken"
+                            ],
+                            "Resource": "*"
+                        }
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "EcsInstanceRole"
+                    }
+                ]
+            }
+        },
+        "EcsInstanceCloudFormationAccessPolicies": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "EcsInstanceCloudFormationAccessPolicy",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "cloudformation:ListStackResources"
+                            ],
+                            "Resource": {
+                                "Ref": "AWS::StackId"
+                            }
+                        }
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "EcsInstanceRole"
+                    }
+                ]
+            }
+        },
+        "EcsInstanceSesAccessPolicies": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "EcsInstanceSesAccessPolicy",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "ses:SendEmail",
+                                "ses:SendRawEmail"
+                            ],
+                            "Resource": "*"
+                        }
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "EcsInstanceRole"
+                    }
+                ]
+            }
+        },
+        "EcsInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "EcsInstanceRole"
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "EcsServicePolicy": {
+            "Value": {
+                "Ref": "EcsServicePolicy"
+            }
+        },
+        "EcsInstanceProfile": {
+            "Value": {
+                "Ref": "EcsInstanceProfile"
+            }
+        }
+    }
+}

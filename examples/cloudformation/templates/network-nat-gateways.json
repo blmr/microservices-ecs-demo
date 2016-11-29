@@ -1,0 +1,208 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "network-nat-gateways",
+    "Parameters": {
+        "EnvironmentName": {
+            "Type": "String"
+        },
+        "VpcId": {
+            "Type": "String"
+        },
+        "PublicSubnetA": {
+            "Type": "String"
+        },
+        "PublicSubnetB": {
+            "Type": "String"
+        },
+        "PublicSubnetC": {
+            "Type": "String"
+        },
+        "NatGatewayEipAllocationIdSubnetA": {
+            "Type": "String"
+        },
+        "NatGatewayEipAllocationIdSubnetB": {
+            "Type": "String"
+        },
+        "NatGatewayEipAllocationIdSubnetC": {
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "NatGatewayPublicSubnetA": {
+            "Type": "AWS::EC2::NatGateway",
+            "Properties": {
+                "AllocationId": {
+                    "Ref": "NatGatewayEipAllocationIdSubnetA"
+                },
+                "SubnetId": {
+                    "Ref": "PublicSubnetA"
+                }
+            }
+        },
+        "NatGatewayPublicSubnetB": {
+            "Type": "AWS::EC2::NatGateway",
+            "Properties": {
+                "AllocationId": {
+                    "Ref": "NatGatewayEipAllocationIdSubnetB"
+                },
+                "SubnetId": {
+                    "Ref": "PublicSubnetB"
+                }
+            }
+        },
+        "NatGatewayPublicSubnetC": {
+            "Type": "AWS::EC2::NatGateway",
+            "Properties": {
+                "AllocationId": {
+                    "Ref": "NatGatewayEipAllocationIdSubnetC"
+                },
+                "SubnetId": {
+                    "Ref": "PublicSubnetC"
+                }
+            }
+        },
+        "PublicNatGatewayRouteTableA": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VpcId"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-nat-gateway-a-route-table"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "PublicNatGatewayRouteTableB": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VpcId"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-nat-gateway-b-route-table"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "PublicNatGatewayRouteTableC": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VpcId"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-nat-gateway-c-route-table"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "PublicNatGatewayRouteA": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicNatGatewayRouteTableA"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NatGatewayId": {
+                    "Ref": "NatGatewayPublicSubnetA"
+                }
+            }
+        },
+        "PublicNatGatewayRouteB": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicNatGatewayRouteTableB"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NatGatewayId": {
+                    "Ref": "NatGatewayPublicSubnetB"
+                }
+            }
+        },
+        "PublicNatGatewayRouteC": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicNatGatewayRouteTableC"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NatGatewayId": {
+                    "Ref": "NatGatewayPublicSubnetC"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "PublicNatGatewayRouteTableA": {
+            "Value": {
+                "Ref": "PublicNatGatewayRouteTableA"
+            }
+        },
+        "PublicNatGatewayRouteTableB": {
+            "Value": {
+                "Ref": "PublicNatGatewayRouteTableB"
+            }
+        },
+        "PublicNatGatewayRouteTableC": {
+            "Value": {
+                "Ref": "PublicNatGatewayRouteTableC"
+            }
+        }
+    }
+}

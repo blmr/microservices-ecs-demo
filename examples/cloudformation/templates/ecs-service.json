@@ -1,0 +1,1547 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "ecs-service",
+    "Parameters": {
+        "EnvironmentName": {
+            "Type": "String"
+        },
+        "TierName": {
+            "Type": "String"
+        },
+        "CidrPrefix": {
+            "Type": "String"
+        },
+        "Vpc": {
+            "Type": "String"
+        },
+        "ServiceName": {
+            "Type": "String"
+        },
+        "ServiceImageName": {
+            "Type": "String"
+        },
+        "ServiceImageVersion": {
+            "Type": "String",
+            "Default": "latest"
+        },
+        "InstanceMainPort": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "InstanceAdminPort": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "ContainerMainPort": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "ContainerAdminPort": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "PublicPort": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "PublicSslPort": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "PublicCidrIp": {
+            "Type": "String",
+            "Default": "0.0.0.0/0"
+        },
+        "WithPublicHttpProtocol": {
+            "Type": "String",
+            "Default": "yes"
+        },
+        "PublicHealthCheckTarget": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "PrivatePort": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "WithPrivateHttpProtocol": {
+            "Type": "String",
+            "Default": "yes"
+        },
+        "PrivateHealthCheckTarget": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "ExternalEcsInstanceSecurityGroup": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "InternalEcsInstanceSecurityGroup": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "SubnetA": {
+            "Type": "String",
+            "Default": ""
+        },
+        "SubnetB": {
+            "Type": "String",
+            "Default": ""
+        },
+        "SubnetC": {
+            "Type": "String",
+            "Default": ""
+        },
+        "PublicHostedZone": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "DomainName": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "PrivateHostedZone": {
+            "Type": "String",
+            "Default": ""
+        },
+        "EcsCluster": {
+            "Type": "String"
+        },
+        "EcsServicePolicy": {
+            "Type": "String"
+        },
+        "EcsInstanceSecurityGroup": {
+            "Type": "String",
+            "Default": ""
+        },
+        "EcsDesiredCount": {
+            "Type": "String",
+            "Default": "3"
+        },
+        "EcsDeploymentMaximumPercent": {
+            "Type": "Number",
+            "Default": "200"
+        },
+        "EcsDeploymentMinimumHealthyPercent": {
+            "Type": "Number",
+            "Default": "100"
+        },
+        "EcsCpu": {
+            "Type": "String",
+            "Default": "10"
+        },
+        "EcsMemory": {
+            "Type": "String",
+            "Default": "300"
+        },
+        "CustomEnvironmentVariableOneName": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "CustomEnvironmentVariableOneValue": {
+            "Type": "String",
+            "Default": ""
+        },
+        "CustomEnvironmentVariableTwoName": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "CustomEnvironmentVariableTwoValue": {
+            "Type": "String",
+            "Default": ""
+        },
+        "CustomEnvironmentVariableThreeName": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "CustomEnvironmentVariableThreeValue": {
+            "Type": "String",
+            "Default": ""
+        },
+        "CustomEnvironmentVariableFourName": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "CustomEnvironmentVariableFourValue": {
+            "Type": "String",
+            "Default": ""
+        },
+        "CustomEnvironmentVariableFiveName": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "CustomEnvironmentVariableFiveValue": {
+            "Type": "String",
+            "Default": ""
+        },
+        "CustomEnvironmentVariableSixName": {
+            "Type": "String",
+            "Default": "VOID"
+        },
+        "CustomEnvironmentVariableSixValue": {
+            "Type": "String",
+            "Default": ""
+        }
+    },
+    "Conditions": {
+        "WithMainPort": {
+            "Fn::And": [
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "ContainerMainPort"
+                                },
+                                "VOID"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "InstanceMainPort"
+                                },
+                                "VOID"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "WithAdminPort": {
+            "Fn::And": [
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "ContainerAdminPort"
+                                },
+                                "VOID"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "InstanceAdminPort"
+                                },
+                                "VOID"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "WithPublicPort": {
+            "Fn::And": [
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "PublicPort"
+                                },
+                                "VOID"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Condition": "WithMainPort"
+                }
+            ]
+        },
+        "WithPublicSslPort": {
+            "Fn::And": [
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "PublicSslPort"
+                                },
+                                "VOID"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Condition": "WithMainPort"
+                }
+            ]
+        },
+        "WithPublicPorts": {
+            "Fn::Or": [
+                {
+                    "Condition": "WithPublicPort"
+                },
+                {
+                    "Condition": "WithPublicSslPort"
+                }
+            ]
+        },
+        "WithPublicMainPort": {
+            "Fn::And": [
+                {
+                    "Condition": "WithPublicPorts"
+                },
+                {
+                    "Condition": "WithMainPort"
+                }
+            ]
+        },
+        "WithPublicAdminPort": {
+            "Fn::And": [
+                {
+                    "Condition": "WithPublicPorts"
+                },
+                {
+                    "Condition": "WithAdminPort"
+                }
+            ]
+        },
+        "WithPublicRecordSet": {
+            "Fn::And": [
+                {
+                    "Condition": "WithPublicPorts"
+                },
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "PublicHostedZone"
+                                },
+                                "VOID"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "WithPublicHttpProtocol": {
+            "Fn::Equals": [
+                {
+                    "Ref": "WithPublicHttpProtocol"
+                },
+                "yes"
+            ]
+        },
+        "WithPublicHealthCheck": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "PublicHealthCheckTarget"
+                        },
+                        "VOID"
+                    ]
+                }
+            ]
+        },
+        "WithPrivatePort": {
+            "Fn::And": [
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "PrivatePort"
+                                },
+                                "VOID"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Condition": "WithMainPort"
+                }
+            ]
+        },
+        "WithPrivateMainPort": {
+            "Fn::And": [
+                {
+                    "Condition": "WithPrivatePort"
+                },
+                {
+                    "Condition": "WithMainPort"
+                }
+            ]
+        },
+        "WithPrivateAdminPort": {
+            "Fn::And": [
+                {
+                    "Condition": "WithPrivatePort"
+                },
+                {
+                    "Condition": "WithAdminPort"
+                }
+            ]
+        },
+        "WithPrivateRecordSet": {
+            "Fn::And": [
+                {
+                    "Condition": "WithPrivatePort"
+                },
+                {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Ref": "PrivateHostedZone"
+                                },
+                                "VOID"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "WithPrivateHttpProtocol": {
+            "Fn::Equals": [
+                {
+                    "Ref": "WithPrivateHttpProtocol"
+                },
+                "yes"
+            ]
+        },
+        "WithPrivateHealthCheck": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "PrivateHealthCheckTarget"
+                        },
+                        "VOID"
+                    ]
+                }
+            ]
+        },
+        "WithCustomEnvironmentVariableOne": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "CustomEnvironmentVariableOneName"
+                        },
+                        "VOID"
+                    ]
+                }
+            ]
+        },
+        "WithCustomEnvironmentVariableTwo": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "CustomEnvironmentVariableTwoName"
+                        },
+                        "VOID"
+                    ]
+                }
+            ]
+        },
+        "WithCustomEnvironmentVariableThree": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "CustomEnvironmentVariableThreeName"
+                        },
+                        "VOID"
+                    ]
+                }
+            ]
+        },
+        "WithCustomEnvironmentVariableFour": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "CustomEnvironmentVariableFourName"
+                        },
+                        "VOID"
+                    ]
+                }
+            ]
+        },
+        "WithCustomEnvironmentVariableFive": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "CustomEnvironmentVariableFiveName"
+                        },
+                        "VOID"
+                    ]
+                }
+            ]
+        },
+        "WithCustomEnvironmentVariableSix": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "CustomEnvironmentVariableSixName"
+                        },
+                        "VOID"
+                    ]
+                }
+            ]
+        }
+    },
+    "Resources": {
+        "EcsInstanceIngressExternalEcsInstanceMain": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithMainPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "ExternalEcsInstanceSecurityGroup"
+                }
+            }
+        },
+        "EcsInstanceIngressInternalEcsInstanceMain": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithMainPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "InternalEcsInstanceSecurityGroup"
+                }
+            }
+        },
+        "EcsInstanceIngressExternalEcsInstanceAdmin": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithAdminPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "ExternalEcsInstanceSecurityGroup"
+                }
+            }
+        },
+        "EcsInstanceIngressInternalEcsInstanceAdmin": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithAdminPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "InternalEcsInstanceSecurityGroup"
+                }
+            }
+        },
+        "PublicElbSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Condition": "WithPublicPorts",
+            "Properties": {
+                "GroupDescription": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "EnvironmentName"
+                            },
+                            "-",
+                            {
+                                "Ref": "TierName"
+                            },
+                            "-",
+                            {
+                                "Ref": "ServiceName"
+                            },
+                            "-public-elb-sg"
+                        ]
+                    ]
+                },
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "TierName"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "ServiceName"
+                                    },
+                                    "-public-elb-sg"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    },
+                    {
+                        "Key": "TierName",
+                        "Value": {
+                            "Ref": "TierName"
+                        }
+                    },
+                    {
+                        "Key": "AccessLevel",
+                        "Value": "public"
+                    }
+                ]
+            }
+        },
+        "PublicElbIngressCidrIp": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithPublicPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "PublicElbSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "PublicPort"
+                },
+                "ToPort": {
+                    "Ref": "PublicPort"
+                },
+                "CidrIp": {
+                    "Ref": "PublicCidrIp"
+                }
+            }
+        },
+        "PublicElbIngressSslCidrIp": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithPublicSslPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "PublicElbSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "PublicSslPort"
+                },
+                "ToPort": {
+                    "Ref": "PublicSslPort"
+                },
+                "CidrIp": {
+                    "Ref": "PublicCidrIp"
+                }
+            }
+        },
+        "PublicElbEgressMain": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Condition": "WithPublicMainPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "PublicElbSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "DestinationSecurityGroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                }
+            }
+        },
+        "PublicElbEgressAdmin": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Condition": "WithPublicAdminPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "PublicElbSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "DestinationSecurityGroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                }
+            }
+        },
+        "EcsInstanceIngressPublicElbMain": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithPublicMainPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "PublicElbSecurityGroup"
+                }
+            }
+        },
+        "EcsInstanceIngressPublicElbAdmin": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithPublicAdminPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "PublicElbSecurityGroup"
+                }
+            }
+        },
+        "PublicElb": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Condition": "WithPublicPorts",
+            "Properties": {
+                "Subnets": [
+                    {
+                        "Ref": "SubnetA"
+                    },
+                    {
+                        "Ref": "SubnetB"
+                    },
+                    {
+                        "Ref": "SubnetC"
+                    }
+                ],
+                "Listeners": [
+                    {
+                        "Fn::If": [
+                            "WithPublicPort",
+                            {
+                                "LoadBalancerPort": {
+                                    "Ref": "PublicPort"
+                                },
+                                "InstancePort": {
+                                    "Ref": "InstanceMainPort"
+                                },
+                                "Protocol": {
+                                    "Fn::If": [
+                                        "WithPublicHttpProtocol",
+                                        "HTTP",
+                                        "TCP"
+                                    ]
+                                }
+                            },
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    {
+                        "Fn::If": [
+                            "WithPublicSslPort",
+                            {
+                                "LoadBalancerPort": {
+                                    "Ref": "PublicSslPort"
+                                },
+                                "InstancePort": {
+                                    "Ref": "InstanceMainPort"
+                                },
+                                "SSLCertificateId": "arn:aws:iam::123456789012:server-certificate/your_SSL_certificate",
+                                "Protocol": {
+                                    "Fn::If": [
+                                        "WithPublicHttpProtocol",
+                                        "HTTPS",
+                                        "SSL"
+                                    ]
+                                }
+                            },
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    }
+                ],
+                "SecurityGroups": [
+                    {
+                        "Ref": "PublicElbSecurityGroup"
+                    }
+                ],
+                "CrossZone": true,
+                "Scheme": "internet-facing",
+                "HealthCheck": {
+                    "Fn::If": [
+                        "WithPublicHealthCheck",
+                        {
+                            "Target": {
+                                "Ref": "PublicHealthCheckTarget"
+                            },
+                            "HealthyThreshold": "2",
+                            "UnhealthyThreshold": "10",
+                            "Interval": "30",
+                            "Timeout": "10"
+                        },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                },
+                "ConnectionDrainingPolicy": {
+                    "Enabled": true,
+                    "Timeout": 15
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "TierName"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "ServiceName"
+                                    },
+                                    "-public-elb"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    },
+                    {
+                        "Key": "TierName",
+                        "Value": {
+                            "Ref": "TierName"
+                        }
+                    },
+                    {
+                        "Key": "AccessLevel",
+                        "Value": "public"
+                    }
+                ]
+            }
+        },
+        "PublicElbRecordSet": {
+            "Type": "AWS::Route53::RecordSet",
+            "Condition": "WithPublicRecordSet",
+            "Properties": {
+                "AliasTarget": {
+                    "HostedZoneId": {
+                        "Fn::GetAtt": [
+                            "PublicElb",
+                            "CanonicalHostedZoneNameID"
+                        ]
+                    },
+                    "DNSName": {
+                        "Fn::GetAtt": [
+                            "PublicElb",
+                            "DNSName"
+                        ]
+                    }
+                },
+                "HostedZoneId": {
+                    "Ref": "PublicHostedZone"
+                },
+                "Name": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "ServiceName"
+                            },
+                            ".",
+                            {
+                                "Ref": "DomainName"
+                            },
+                            "."
+                        ]
+                    ]
+                },
+                "Type": "A"
+            }
+        },
+        "PrivateElbSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Condition": "WithPrivatePort",
+            "Properties": {
+                "GroupDescription": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "EnvironmentName"
+                            },
+                            "-",
+                            {
+                                "Ref": "TierName"
+                            },
+                            "-",
+                            {
+                                "Ref": "ServiceName"
+                            },
+                            "-private-elb-sg"
+                        ]
+                    ]
+                },
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "TierName"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "ServiceName"
+                                    },
+                                    "-private-elb-sg"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    },
+                    {
+                        "Key": "TierName",
+                        "Value": {
+                            "Ref": "TierName"
+                        }
+                    },
+                    {
+                        "Key": "AccessLevel",
+                        "Value": "private"
+                    }
+                ]
+            }
+        },
+        "PrivateElbIngressExternalEcsInstance": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithPrivatePort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "PrivateElbSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "PrivatePort"
+                },
+                "ToPort": {
+                    "Ref": "PrivatePort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "ExternalEcsInstanceSecurityGroup"
+                }
+            }
+        },
+        "PrivateElbIngressInternalEcsInstance": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithPrivatePort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "PrivateElbSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "PrivatePort"
+                },
+                "ToPort": {
+                    "Ref": "PrivatePort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "InternalEcsInstanceSecurityGroup"
+                }
+            }
+        },
+        "PrivateElbEgressMain": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Condition": "WithPrivateMainPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "PrivateElbSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "DestinationSecurityGroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                }
+            }
+        },
+        "PrivateElbEgressAdmin": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Condition": "WithPrivateAdminPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "PrivateElbSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "DestinationSecurityGroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                }
+            }
+        },
+        "EcsInstanceIngressPrivateElbMain": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithPrivateMainPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceMainPort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "PrivateElbSecurityGroup"
+                }
+            }
+        },
+        "EcsInstanceIngressPrivateElbAdmin": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Condition": "WithPrivateAdminPort",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "ToPort": {
+                    "Ref": "InstanceAdminPort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "PrivateElbSecurityGroup"
+                }
+            }
+        },
+        "PrivateElb": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Condition": "WithPrivatePort",
+            "Properties": {
+                "Subnets": [
+                    {
+                        "Ref": "SubnetA"
+                    },
+                    {
+                        "Ref": "SubnetB"
+                    },
+                    {
+                        "Ref": "SubnetC"
+                    }
+                ],
+                "Listeners": [
+                    {
+                        "LoadBalancerPort": {
+                            "Ref": "PrivatePort"
+                        },
+                        "InstancePort": {
+                            "Ref": "InstanceMainPort"
+                        },
+                        "Protocol": {
+                            "Fn::If": [
+                                "WithPrivateHttpProtocol",
+                                "HTTP",
+                                "TCP"
+                            ]
+                        }
+                    }
+                ],
+                "SecurityGroups": [
+                    {
+                        "Ref": "PrivateElbSecurityGroup"
+                    }
+                ],
+                "CrossZone": true,
+                "Scheme": "internal",
+                "HealthCheck": {
+                    "Fn::If": [
+                        "WithPrivateHealthCheck",
+                        {
+                            "Target": {
+                                "Ref": "PrivateHealthCheckTarget"
+                            },
+                            "HealthyThreshold": "2",
+                            "UnhealthyThreshold": "10",
+                            "Interval": "30",
+                            "Timeout": "5"
+                        },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                },
+                "ConnectionDrainingPolicy": {
+                    "Enabled": true,
+                    "Timeout": 15
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "TierName"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "ServiceName"
+                                    },
+                                    "-private-elb"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    },
+                    {
+                        "Key": "TierName",
+                        "Value": {
+                            "Ref": "TierName"
+                        }
+                    },
+                    {
+                        "Key": "AccessLevel",
+                        "Value": "private"
+                    }
+                ]
+            }
+        },
+        "PrivateElbRecordSet": {
+            "Type": "AWS::Route53::RecordSet",
+            "Condition": "WithPrivatePort",
+            "Properties": {
+                "AliasTarget": {
+                    "HostedZoneId": {
+                        "Fn::GetAtt": [
+                            "PrivateElb",
+                            "CanonicalHostedZoneNameID"
+                        ]
+                    },
+                    "DNSName": {
+                        "Fn::GetAtt": [
+                            "PrivateElb",
+                            "DNSName"
+                        ]
+                    }
+                },
+                "HostedZoneId": {
+                    "Ref": "PrivateHostedZone"
+                },
+                "Name": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "ServiceName"
+                            },
+                            "-",
+                            {
+                                "Ref": "TierName"
+                            },
+                            ".private."
+                        ]
+                    ]
+                },
+                "Type": "A"
+            }
+        },
+        "EcsTaskDefinition": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Name": {
+                            "Ref": "ServiceName"
+                        },
+                        "Cpu": {
+                            "Ref": "EcsCpu"
+                        },
+                        "Memory": {
+                            "Ref": "EcsMemory"
+                        },
+                        "Essential": "true",
+                        "Image": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "ServiceImageName"
+                                    },
+                                    ":",
+                                    {
+                                        "Ref": "ServiceImageVersion"
+                                    }
+                                ]
+                            ]
+                        },
+                        "PortMappings": [
+                            {
+                                "Fn::If": [
+                                    "WithMainPort",
+                                    {
+                                        "HostPort": {
+                                            "Ref": "InstanceMainPort"
+                                        },
+                                        "ContainerPort": {
+                                            "Ref": "ContainerMainPort"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "WithAdminPort",
+                                    {
+                                        "HostPort": {
+                                            "Ref": "InstanceAdminPort"
+                                        },
+                                        "ContainerPort": {
+                                            "Ref": "ContainerAdminPort"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            }
+                        ],
+                        "Environment": [
+                            {
+                                "Name": "ENVIRONMENT_NAME",
+                                "Value": {
+                                    "Ref": "EnvironmentName"
+                                }
+                            },
+                            {
+                                "Name": "REGION",
+                                "Value": {
+                                    "Ref": "AWS::Region"
+                                }
+                            },
+                            {
+                                "Name": "TIER_NAME",
+                                "Value": {
+                                    "Ref": "TierName"
+                                }
+                            },
+                            {
+                                "Name": "SERVICE_NAME",
+                                "Value": {
+                                    "Ref": "ServiceName"
+                                }
+                            },
+                            {
+                                "Fn::If": [
+                                    "WithMainPort",
+                                    {
+                                        "Name": "INSTANCE_MAIN_PORT",
+                                        "Value": {
+                                            "Ref": "InstanceMainPort"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "WithAdminPort",
+                                    {
+                                        "Name": "INSTANCE_PORT_ADMIN",
+                                        "Value": {
+                                            "Ref": "InstanceAdminPort"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "WithCustomEnvironmentVariableOne",
+                                    {
+                                        "Name": {
+                                            "Ref": "CustomEnvironmentVariableOneName"
+                                        },
+                                        "Value": {
+                                            "Ref": "CustomEnvironmentVariableOneValue"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "WithCustomEnvironmentVariableTwo",
+                                    {
+                                        "Name": {
+                                            "Ref": "CustomEnvironmentVariableTwoName"
+                                        },
+                                        "Value": {
+                                            "Ref": "CustomEnvironmentVariableTwoValue"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "WithCustomEnvironmentVariableThree",
+                                    {
+                                        "Name": {
+                                            "Ref": "CustomEnvironmentVariableThreeName"
+                                        },
+                                        "Value": {
+                                            "Ref": "CustomEnvironmentVariableThreeValue"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "WithCustomEnvironmentVariableFour",
+                                    {
+                                        "Name": {
+                                            "Ref": "CustomEnvironmentVariableFourName"
+                                        },
+                                        "Value": {
+                                            "Ref": "CustomEnvironmentVariableFourValue"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "WithCustomEnvironmentVariableFive",
+                                    {
+                                        "Name": {
+                                            "Ref": "CustomEnvironmentVariableFiveName"
+                                        },
+                                        "Value": {
+                                            "Ref": "CustomEnvironmentVariableFiveValue"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            },
+                            {
+                                "Fn::If": [
+                                    "WithCustomEnvironmentVariableSix",
+                                    {
+                                        "Name": {
+                                            "Ref": "CustomEnvironmentVariableSixName"
+                                        },
+                                        "Value": {
+                                            "Ref": "CustomEnvironmentVariableSixValue"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "AWS::NoValue"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "EcsService": {
+            "Type": "AWS::ECS::Service",
+            "Properties": {
+                "Cluster": {
+                    "Ref": "EcsCluster"
+                },
+                "DeploymentConfiguration": {
+                    "MaximumPercent": {
+                        "Ref": "EcsDeploymentMaximumPercent"
+                    },
+                    "MinimumHealthyPercent": {
+                        "Ref": "EcsDeploymentMinimumHealthyPercent"
+                    }
+                },
+                "DesiredCount": {
+                    "Ref": "EcsDesiredCount"
+                },
+                "LoadBalancers": [
+                    {
+                        "Fn::If": [
+                            "WithPublicPorts",
+                            {
+                                "ContainerName": {
+                                    "Ref": "ServiceName"
+                                },
+                                "ContainerPort": {
+                                    "Ref": "ContainerMainPort"
+                                },
+                                "LoadBalancerName": {
+                                    "Ref": "PublicElb"
+                                }
+                            },
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    {
+                        "Fn::If": [
+                            "WithPrivatePort",
+                            {
+                                "ContainerName": {
+                                    "Ref": "ServiceName"
+                                },
+                                "ContainerPort": {
+                                    "Ref": "ContainerMainPort"
+                                },
+                                "LoadBalancerName": {
+                                    "Ref": "PrivateElb"
+                                }
+                            },
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    }
+                ],
+                "Role": {
+                    "Fn::If": [
+                        "WithMainPort",
+                        {
+                            "Ref": "EcsServicePolicy"
+                        },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                },
+                "TaskDefinition": {
+                    "Ref": "EcsTaskDefinition"
+                }
+            }
+        }
+    }
+}

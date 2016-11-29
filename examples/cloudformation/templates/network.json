@@ -1,0 +1,1168 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "network-stack",
+    "Parameters": {
+        "EnvironmentName": {
+            "Type": "String"
+        },
+        "CidrPrefix": {
+            "Type": "String"
+        },
+        "Region": {
+            "Type": "String",
+            "Default": "eu-west-1"
+        },
+        "CloudFormationTemplatesS3Bucket": {
+            "Type": "String"
+        },
+        "CloudFormationVersion": {
+            "Type": "String"
+        },
+        "KeyName": {
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        },
+        "WithNatGatewaysStack": {
+            "Type": "String"
+        },
+        "NatGatewayEipAllocationIdSubnetA": {
+            "Type": "String"
+        },
+        "NatGatewayEipAllocationIdSubnetB": {
+            "Type": "String"
+        },
+        "NatGatewayEipAllocationIdSubnetC": {
+            "Type": "String"
+        }
+    },
+    "Mappings": {
+        "Cidr": {
+            "Vpc": {
+                "Suffix": "0.0/16"
+            },
+            "PublicSubnetA": {
+                "Suffix": "0.0/21"
+            },
+            "PublicSubnetB": {
+                "Suffix": "8.0/21"
+            },
+            "PublicSubnetC": {
+                "Suffix": "16.0/21"
+            },
+            "PrivateSubnetA": {
+                "Suffix": "64.0/21"
+            },
+            "PrivateSubnetB": {
+                "Suffix": "72.0/21"
+            },
+            "PrivateSubnetC": {
+                "Suffix": "80.0/21"
+            }
+        },
+        "CloudFormationBucketRegionMap": {
+            "us-east-1": {
+                "Suffix": "useast1"
+            },
+            "us-west-1": {
+                "Suffix": "uswest1"
+            },
+            "us-west-2": {
+                "Suffix": "uswest2"
+            },
+            "eu-west-1": {
+                "Suffix": "euwest1"
+            },
+            "eu-central-1": {
+                "Suffix": "eucentral1"
+            },
+            "ap-northeast-1": {
+                "Suffix": "apnortheast1"
+            },
+            "ap-northeast-2": {
+                "Suffix": "apnortheast2"
+            },
+            "ap-southeast-1": {
+                "Suffix": "apsoutheast1"
+            },
+            "ap-southeast-2": {
+                "Suffix": "apsoutheast2"
+            },
+            "sa-east-1": {
+                "Suffix": "saeast1"
+            }
+        }
+    },
+    "Conditions": {
+        "WithNatGatewaysStack": {
+          "Fn::Equals": [
+              {
+                  "Ref": "WithNatGatewaysStack"
+              },
+              "yes"
+          ]
+        }
+    },
+    "Resources": {
+        "NatGatewaysStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Condition": "WithNatGatewaysStack",
+            "DependsOn": [
+                "Vpc",
+                "VpcGatewayAttachment",
+                "PublicSubnetA",
+                "PublicSubnetB",
+                "PublicSubnetC"
+            ],
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "https://s3-",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            ".amazonaws.com/",
+                            { 
+                                "Ref": "CloudFormationTemplatesS3Bucket"
+                            },
+                            "/versions/",
+                            {
+                                "Ref": "CloudFormationVersion"
+                            },
+                            "/network-nat-gateways.json"
+                        ]
+                    ]
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "EnvironmentName": {
+                        "Ref": "EnvironmentName"
+                    },
+                    "VpcId": {
+                        "Ref": "Vpc"
+                    },
+                    "PublicSubnetA": {
+                        "Ref": "PublicSubnetA"
+                    },
+                    "PublicSubnetB": {
+                        "Ref": "PublicSubnetB"
+                    },
+                    "PublicSubnetC": {
+                        "Ref": "PublicSubnetC"
+                    },
+                    "NatGatewayEipAllocationIdSubnetA": {
+                        "Ref": "NatGatewayEipAllocationIdSubnetA"
+                    },
+                    "NatGatewayEipAllocationIdSubnetB": {
+                        "Ref": "NatGatewayEipAllocationIdSubnetB"
+                    },
+                    "NatGatewayEipAllocationIdSubnetC": {
+                        "Ref": "NatGatewayEipAllocationIdSubnetC"
+                    }
+                }
+            }
+        },
+        "Vpc": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "CidrPrefix"
+                            },
+                            ".",
+                            {
+                                "Fn::FindInMap": [
+                                    "Cidr",
+                                    "Vpc",
+                                    "Suffix"
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "EnableDnsSupport": true,
+                "EnableDnsHostnames": true,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-vpc"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "VpcInternetGateway": {
+            "Type": "AWS::EC2::InternetGateway"
+        },
+        "VpcGatewayAttachment": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "InternetGatewayId": {
+                    "Ref": "VpcInternetGateway"
+                }
+            }
+        },
+        "VpcInternetGatewayRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-internet-route-table"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "VpcInternetGatewayRoute": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "VpcInternetGatewayRouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "VpcInternetGateway"
+                }
+            }
+        },
+        "InternetGatewayRouteTableA": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-internet-gateway-route-table-a"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "InternetGatewayRouteA": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "InternetGatewayRouteTableA"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "VpcInternetGateway"
+                }
+            }
+        },
+        "InternetGatewayRouteTableB": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-internet-gateway-route-table-b"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "InternetGatewayRouteB": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "InternetGatewayRouteTableB"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "VpcInternetGateway"
+                }
+            }
+        },
+        "InternetGatewayRouteTableC": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-internet-gateway-route-table-c"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "InternetGatewayRouteC": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "InternetGatewayRouteTableC"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "VpcInternetGateway"
+                }
+            }
+        },
+        "VpcEndpoint": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": [
+                                "s3:Get*",
+                                "s3:List*"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": [
+                                "arn:aws:s3:::*",
+                                "arn:aws:s3:::packages.eu-west-1.amazonaws.com",
+                                "arn:aws:s3:::packages.eu-west-1.amazonaws.com/*",
+                                "arn:aws:s3:::packages.eu-central-1.amazonaws.com",
+                                "arn:aws:s3:::packages.eu-central-1.amazonaws.com/*",
+                                "arn:aws:s3:::packages.us-east-1.amazonaws.com",
+                                "arn:aws:s3:::packages.us-east-1.amazonaws.com/*",
+                                "arn:aws:s3:::packages.us-west-1.amazonaws.com",
+                                "arn:aws:s3:::packages.us-west-1.amazonaws.com/*",
+                                "arn:aws:s3:::packages.us-west-2.amazonaws.com",
+                                "arn:aws:s3:::packages.us-west-2.amazonaws.com/*",
+                                "arn:aws:s3:::packages.ap-southeast-1.amazonaws.com",
+                                "arn:aws:s3:::packages.ap-southeast-1.amazonaws.com/*",
+                                "arn:aws:s3:::packages.ap-northeast-1.amazonaws.com",
+                                "arn:aws:s3:::packages.ap-northeast-1.amazonaws.com/*",
+                                "arn:aws:s3:::packages.sa-east-1.amazonaws.com",
+                                "arn:aws:s3:::packages.sa-east-1.amazonaws.com/*",
+                                "arn:aws:s3:::packages.ap-southeast-2.amazonaws.com",
+                                "arn:aws:s3:::packages.ap-southeast-2.amazonaws.com/*",
+                                "arn:aws:s3:::repo.eu-west-1.amazonaws.com",
+                                "arn:aws:s3:::repo.eu-west-1.amazonaws.com/*",
+                                "arn:aws:s3:::repo.eu-central-1.amazonaws.com",
+                                "arn:aws:s3:::repo.eu-central-1.amazonaws.com/*",
+                                "arn:aws:s3:::repo.us-east-1.amazonaws.com",
+                                "arn:aws:s3:::repo.us-east-1.amazonaws.com/*",
+                                "arn:aws:s3:::repo.us-west-1.amazonaws.com",
+                                "arn:aws:s3:::repo.us-west-1.amazonaws.com/*",
+                                "arn:aws:s3:::repo.us-west-2.amazonaws.com",
+                                "arn:aws:s3:::repo.us-west-2.amazonaws.com/*",
+                                "arn:aws:s3:::repo.ap-southeast-1.amazonaws.com",
+                                "arn:aws:s3:::repo.ap-southeast-1.amazonaws.com/*",
+                                "arn:aws:s3:::repo.ap-northeast-1.amazonaws.com",
+                                "arn:aws:s3:::repo.ap-northeast-1.amazonaws.com/*",
+                                "arn:aws:s3:::repo.sa-east-1.amazonaws.com",
+                                "arn:aws:s3:::repo.sa-east-1.amazonaws.com/*",
+                                "arn:aws:s3:::repo.ap-southeast-2.amazonaws.com",
+                                "arn:aws:s3:::repo.ap-southeast-2.amazonaws.com/*"
+                            ],
+                            "Principal": "*"
+                        },
+                        {
+                            "Action": [
+                                "s3:*"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": [
+                                {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:s3:::cloudformation-custom-resource-response-",
+                                            {
+                                                "Fn::FindInMap": [
+                                                    "CloudFormationBucketRegionMap",
+                                                    {
+                                                        "Ref": "AWS::Region"
+                                                    },
+                                                    "Suffix"
+                                                ]
+                                            }
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:s3:::cloudformation-custom-resource-response-",
+                                            {
+                                                "Fn::FindInMap": [
+                                                    "CloudFormationBucketRegionMap",
+                                                    {
+                                                        "Ref": "AWS::Region"
+                                                    },
+                                                    "Suffix"
+                                                ]
+                                            },
+                                            "/*"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:s3:::cloudformation-waitcondition-",
+                                            {
+                                                "Fn::FindInMap": [
+                                                    "CloudFormationBucketRegionMap",
+                                                    {
+                                                        "Ref": "AWS::Region"
+                                                    },
+                                                    "Suffix"
+                                                ]
+                                            }
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:s3:::cloudformation-waitcondition-",
+                                            {
+                                                "Fn::FindInMap": [
+                                                    "CloudFormationBucketRegionMap",
+                                                    {
+                                                        "Ref": "AWS::Region"
+                                                    },
+                                                    "Suffix"
+                                                ]
+                                            },
+                                            "/*"
+                                        ]
+                                    ]
+                                }
+                            ],
+                            "Principal": "*"
+                        }
+                    ]
+                },
+                "RouteTableIds": [
+                    {
+                        "Ref": "VpcInternetGatewayRouteTable"
+                    },
+                    {
+                        "Fn::If": [
+                            "WithNatGatewaysStack",
+                            {
+                                "Fn::GetAtt": [
+                                    "NatGatewaysStack",
+                                    "Outputs.PublicNatGatewayRouteTableA"
+                                ]
+                            },
+                            {
+                                "Ref": "InternetGatewayRouteTableA"
+                            }
+                        ]
+                    },
+                    {
+                        "Fn::If": [
+                            "WithNatGatewaysStack",
+                            {
+                                "Fn::GetAtt": [
+                                    "NatGatewaysStack",
+                                    "Outputs.PublicNatGatewayRouteTableB"
+                                ]
+                            },
+                            {
+                                "Ref": "InternetGatewayRouteTableB"
+                            }
+                        ]
+                    },
+                    {
+                        "Fn::If": [
+                            "WithNatGatewaysStack",
+                            {
+                                "Fn::GetAtt": [
+                                    "NatGatewaysStack",
+                                    "Outputs.PublicNatGatewayRouteTableC"
+                                ]
+                            },
+                            {
+                                "Ref": "InternetGatewayRouteTableC"
+                            }
+                        ]
+                    }
+                ],
+                "ServiceName": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "com.amazonaws.",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            ".s3"
+                        ]
+                    ]
+                },
+                "VpcId": {
+                    "Ref": "Vpc"
+                }
+            }
+        },
+        "PublicSubnetA": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "AvailabilityZone": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "Region"
+                            },
+                            "a"
+                        ]
+                    ]
+                },
+                "CidrBlock": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "CidrPrefix"
+                            },
+                            ".",
+                            {
+                                "Fn::FindInMap": [
+                                    "Cidr",
+                                    "PublicSubnetA",
+                                    "Suffix"
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-public-subnet-a"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "Zone",
+                        "Value": "public"
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "PublicSubnetARouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PublicSubnetA"
+                },
+                "RouteTableId": {
+                    "Ref": "VpcInternetGatewayRouteTable"
+                }
+            }
+        },
+        "PublicSubnetB": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "AvailabilityZone": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "Region"
+                            },
+                            "b"
+                        ]
+                    ]
+                },
+                "CidrBlock": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "CidrPrefix"
+                            },
+                            ".",
+                            {
+                                "Fn::FindInMap": [
+                                    "Cidr",
+                                    "PublicSubnetB",
+                                    "Suffix"
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-public-subnet-b"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "Zone",
+                        "Value": "public"
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "PublicSubnetBRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PublicSubnetB"
+                },
+                "RouteTableId": {
+                    "Ref": "VpcInternetGatewayRouteTable"
+                }
+            }
+        },
+        "PublicSubnetC": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "AvailabilityZone": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "Region"
+                            },
+                            "c"
+                        ]
+                    ]
+                },
+                "CidrBlock": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "CidrPrefix"
+                            },
+                            ".",
+                            {
+                                "Fn::FindInMap": [
+                                    "Cidr",
+                                    "PublicSubnetC",
+                                    "Suffix"
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-public-subnet-c"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "Zone",
+                        "Value": "public"
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "PublicSubnetCRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PublicSubnetC"
+                },
+                "RouteTableId": {
+                    "Ref": "VpcInternetGatewayRouteTable"
+                }
+            }
+        },
+        "PrivateSubnetA": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "AvailabilityZone": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "Region"
+                            },
+                            "a"
+                        ]
+                    ]
+                },
+                "CidrBlock": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "CidrPrefix"
+                            },
+                            ".",
+                            {
+                                "Fn::FindInMap": [
+                                    "Cidr",
+                                    "PrivateSubnetA",
+                                    "Suffix"
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-internal-subnet-a"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    },
+                    {
+                        "Key": "network",
+                        "Value": "private"
+                    }
+                ]
+            }
+        },
+        "PrivateSubnetARouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PrivateSubnetA"
+                },
+                "RouteTableId": {
+                    "Fn::If": [
+                        "WithNatGatewaysStack",
+                        {
+                            "Fn::GetAtt": [
+                                "NatGatewaysStack",
+                                "Outputs.PublicNatGatewayRouteTableA"
+                            ]
+                        },
+                        {
+                            "Ref": "InternetGatewayRouteTableA"
+                        }
+                    ]
+                }
+            }
+        },
+        "PrivateSubnetB": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "AvailabilityZone": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "Region"
+                            },
+                            "b"
+                        ]
+                    ]
+                },
+                "CidrBlock": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "CidrPrefix"
+                            },
+                            ".",
+                            {
+                                "Fn::FindInMap": [
+                                    "Cidr",
+                                    "PrivateSubnetB",
+                                    "Suffix"
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-internal-subnet-b"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    },
+                    {
+                        "Key": "network",
+                        "Value": "private"
+                    }
+                ]
+            }
+        },
+        "PrivateSubnetBRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PrivateSubnetB"
+                },
+                "RouteTableId": {
+                    "Fn::If": [
+                        "WithNatGatewaysStack",
+                        {
+                            "Fn::GetAtt": [
+                                "NatGatewaysStack",
+                                "Outputs.PublicNatGatewayRouteTableB"
+                            ]
+                        },
+                        {
+                            "Ref": "InternetGatewayRouteTableB"
+                        }
+                    ]
+                }
+            }
+        },
+        "PrivateSubnetC": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "AvailabilityZone": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "Region"
+                            },
+                            "c"
+                        ]
+                    ]
+                },
+                "CidrBlock": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "CidrPrefix"
+                            },
+                            ".",
+                            {
+                                "Fn::FindInMap": [
+                                    "Cidr",
+                                    "PrivateSubnetC",
+                                    "Suffix"
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-internal-subnet-c"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    },
+                    {
+                        "Key": "network",
+                        "Value": "private"
+                    }
+                ]
+            }
+        },
+        "PrivateSubnetCRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PrivateSubnetC"
+                },
+                "RouteTableId": {
+                    "Fn::If": [
+                        "WithNatGatewaysStack",
+                        {
+                            "Fn::GetAtt": [
+                                "NatGatewaysStack",
+                                "Outputs.PublicNatGatewayRouteTableC"
+                            ]
+                        },
+                        {
+                            "Ref": "InternetGatewayRouteTableC"
+                        }
+                    ]
+                }
+            }
+        },
+        "PrivateHostedZone": {
+            "Type": "AWS::Route53::HostedZone",
+            "Properties": {
+                "HostedZoneConfig": {
+                    "Comment": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                {
+                                    "Ref": "EnvironmentName"
+                                },
+                                "-private-hosted-zone"
+                            ]
+                        ]
+                    }
+                },
+                "Name": "private",
+                "VPCs": [
+                    {
+                        "VPCId": {
+                            "Ref": "Vpc"
+                        },
+                        "VPCRegion": {
+                            "Ref": "Region"
+                        }
+                    }
+                ],
+                "HostedZoneTags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-private-hosted-zone"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "Vpc": {
+            "Value": {
+                "Ref": "Vpc"
+            }
+        },
+        "VpcEndpoint": {
+            "Value": {
+                "Ref": "VpcEndpoint"
+            }
+        },
+        "PublicSubnetA": {
+            "Value": {
+                "Ref": "PublicSubnetA"
+            }
+        },
+        "PublicSubnetB": {
+            "Value": {
+                "Ref": "PublicSubnetB"
+            }
+        },
+        "PublicSubnetC": {
+            "Value": {
+                "Ref": "PublicSubnetC"
+            }
+        },
+        "PrivateSubnetA": {
+            "Value": {
+                "Ref": "PrivateSubnetA"
+            }
+        },
+        "PrivateSubnetB": {
+            "Value": {
+                "Ref": "PrivateSubnetB"
+            }
+        },
+        "PrivateSubnetC": {
+            "Value": {
+                "Ref": "PrivateSubnetC"
+            }
+        },
+        "PrivateHostedZone": {
+            "Value": {
+                "Ref": "PrivateHostedZone"
+            }
+        }
+    }
+}

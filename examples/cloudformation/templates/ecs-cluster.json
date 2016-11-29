@@ -1,0 +1,379 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "ecs-cluster",
+    "Parameters": {
+        "EnvironmentName": {
+            "Type": "String"
+        },
+        "ClusterType": {
+            "Type": "String"
+        },
+        "CidrPrefix": {
+            "Type": "String"
+        },
+        "KeyName": {
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        },
+        "Vpc": {
+            "Type": "String"
+        },
+        "Name": {
+            "Type": "String"
+        },
+        "SubnetA": {
+            "Type": "String"
+        },
+        "SubnetB": {
+            "Type": "String"
+        },
+        "SubnetC": {
+            "Type": "String"
+        },
+        "EcsInstanceProfile": {
+            "Type": "String"
+        },
+        "CloudFormationVersion": {
+            "Type": "String"
+        },
+        "EcsInstanceType": {
+            "Type": "String",
+            "Description": "ECS EC2 instance type",
+            "AllowedValues": [
+                "t2.nano",
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "t2.large",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c4.4xlarge",
+                "c4.8xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "r3.large",
+                "r3.xlarge",
+                "r3.2xlarge",
+                "r3.4xlarge",
+                "r3.8xlarge",
+                "i2.xlarge",
+                "i2.2xlarge",
+                "i2.4xlarge",
+                "i2.8xlarge"
+            ],
+            "ConstraintDescription": "Must be a valid EC2 instance type"
+        },
+        "EcsAutoScalingGroupMaxSize": {
+            "Type": "Number",
+            "Description": "Maximum size of the ECS Auto Scaling Group,",
+            "Default": "20"
+        },
+        "EcsAutoScalingGroupDesiredCapacity": {
+            "Type": "Number",
+            "Description": "Desired capacity of the ECS Auto Scaling Group"
+        }
+    },
+    "Conditions": {
+        "IsExternalCluster": {
+            "Fn::Equals": [
+                {
+                        "Ref": "ClusterType"
+                },
+                "external"
+            ]
+        }
+    },
+    "Mappings": {
+        "AmazonOptimizedEcsAmi": {
+            "us-east-1": {
+                "EcsAmiId": "ami-eca289fb"
+            },
+            "us-east-2": {
+                "EcsAmiId": "ami-446f3521"
+            },
+            "us-west-1": {
+                "EcsAmiId": "ami-9fadf8ff"
+            },
+            "us-west-2": {
+                "EcsAmiId": "ami-7abc111a"
+            },
+            "eu-west-1": {
+                "EcsAmiId": "ami-a1491ad2"
+            },
+            "eu-central-1": {
+                "EcsAmiId": "ami-54f5303b"
+            },
+            "ap-northeast-1": {
+                "EcsAmiId": "ami-9cd57ffd"
+            },
+            "ap-southeast-1": {
+                "EcsAmiId": "ami-a900a3ca"
+            },
+            "ap-southeast-2": {
+                "EcsAmiId": "ami-5781be34"
+            }
+        }
+    },
+    "Resources": {
+        "EcsInstanceSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "EnvironmentName"
+                            },
+                            "-",
+                            {
+                                "Ref": "Name"
+                            },
+                            "-ecs-instance-sg"
+                        ]
+                    ]
+                },
+                "VpcId": {
+                    "Ref": "Vpc"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "Name"
+                                    },
+                                    "-ecs-instance-sg"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        }
+                    }
+                ]
+            }
+        },
+        "EcsInstanceSshIngress": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": 22,
+                "ToPort": 22,
+                "CidrIp": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "CidrPrefix"
+                            },
+                            ".0.0/16"
+                        ]
+                    ]
+                }
+            }
+        },
+        "EcsInstanceNtpUdpEgress": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "udp",
+                "FromPort": 123,
+                "ToPort": 123,
+                "CidrIp": "0.0.0.0/0"
+            }
+        },
+        "EcsInstanceTcpGlobalEgress": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": 0,
+                "ToPort": 65535,
+                "CidrIp": "0.0.0.0/0"
+            }
+        },
+        "EcsInstanceUdpGlobalEgress": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "EcsInstanceSecurityGroup"
+                },
+                "IpProtocol": "udp",
+                "FromPort": 0,
+                "ToPort": 65535,
+                "CidrIp": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "CidrPrefix"
+                            },
+                            ".0.0/16"
+                        ]
+                    ]
+                }
+            }
+        },
+        "EcsCluster": {
+            "Type": "AWS::ECS::Cluster"
+        },
+        "EcsLaunchConfiguration": {
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "ImageId": {
+                        "Fn::FindInMap": [
+                           "AmazonOptimizedEcsAmi",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            "EcsAmiId"
+                    ]
+                },
+                "InstanceType": {
+                    "Ref": "EcsInstanceType"
+                },
+                "AssociatePublicIpAddress": {
+                    "Fn::If": [
+                        "IsExternalCluster",
+                        true,
+                        false
+                    ]
+                },
+                "IamInstanceProfile": {
+                    "Ref": "EcsInstanceProfile"
+                },
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "EcsInstanceSecurityGroup"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash\n",
+                                "yum update -y\n",
+                                "yum install -y nc\n",
+                                "yum install -y aws-cli\n",
+                                "yum install -y awslogs\n",
+                                "yum install -y unzip\n",
+                                "yum install -y jq\n",
+                                "yum install -y perl-DateTime perl-Sys-Syslog perl-LWP-Protocol-https\n",
+                                "printf \"\\n\" >> /etc/ecs/ecs.config\n",
+                                "echo ECS_CLUSTER=",
+                                {
+                                    "Ref": "EcsCluster"
+                                },
+                                " >> /etc/ecs/ecs.config\n"
+                            ]
+                        ]
+                    }
+                }
+            }
+        },
+        "EcsAutoScalingGroup": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "VPCZoneIdentifier": [
+                    {
+                        "Ref": "SubnetA"
+                    },
+                    {
+                        "Ref": "SubnetB"
+                    },
+                    {
+                        "Ref": "SubnetC"
+                    }
+                ],
+                "LaunchConfigurationName": {
+                    "Ref": "EcsLaunchConfiguration"
+                },
+                "MinSize": "1",
+                "MaxSize": {
+                    "Ref": "EcsAutoScalingGroupMaxSize"
+                },
+                "DesiredCapacity": {
+                    "Ref": "EcsAutoScalingGroupDesiredCapacity"
+                },
+                "Cooldown": "60",
+                "TerminationPolicies": [
+                    "OldestInstance"
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    {
+                                        "Ref": "EnvironmentName"
+                                    },
+                                    "-",
+                                    {
+                                        "Ref": "Name"
+                                    },
+                                    "-ecs-instance"
+                                ]
+                            ]
+                        },
+                        "PropagateAtLaunch": true
+                    },
+                    {
+                        "Key": "EnvironmentName",
+                        "Value": {
+                            "Ref": "EnvironmentName"
+                        },
+                        "PropagateAtLaunch": true
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "EcsCluster": {
+            "Value": {
+                "Ref": "EcsCluster"
+            }
+        },
+        "EcsAutoScalingGroup": {
+            "Value": {
+                "Ref": "EcsAutoScalingGroup"
+            }
+        },
+        "EcsInstanceSecurityGroup": {
+            "Value": {
+                "Ref": "EcsInstanceSecurityGroup"
+            }
+        }
+    }
+}

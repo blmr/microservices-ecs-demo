@@ -1,0 +1,760 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "main",
+    "Parameters": {
+        "EnvironmentName": {
+            "Type": "String",
+            "MinLength": "3",
+            "MaxLength": "255",
+            "AllowedPattern": ".*"
+        },
+        "CloudFormationVersion": {
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "255",
+            "AllowedPattern": ".*"
+        },
+        "CloudFormationTemplatesS3Bucket": {
+            "Type": "String",
+            "MinLength": "6",
+            "MaxLength": "255",
+            "AllowedPattern": ".*"
+        },
+        "DomainName": {
+            "Type": "String",
+            "AllowedPattern": ".*",
+            "Default": "VOID"
+        },
+        "CidrPrefix": {
+            "Type": "String",
+            "AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.)([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+            "Default": "10.100"
+        },
+        "PublicHostedZone": {
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "100",
+            "AllowedPattern": ".*",
+            "Default": "VOID"
+        },
+        "KeyName": {
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.",
+            "MinLength": "1"
+        },
+        "BackendOneServiceVersion": {
+            "Type": "String",
+            "Default": "latest",
+            "MinLength": "1",
+            "MaxLength": "255",
+            "AllowedPattern": ".*"
+        },
+        "FrontedServiceVersion": {
+            "Type": "String",
+            "Default": "latest",
+            "MinLength": "1",
+            "MaxLength": "255",
+            "AllowedPattern": ".*"
+        },
+        "NatGatewayEipAllocationIdSubnetA": {
+            "Description": "EIP AllocationID to be used by NAT Gateway",
+            "Type": "String",
+            "MinLength": "17",
+            "MaxLength": "17",
+            "AllowedPattern": "eipalloc-(\\w{8})"
+        },
+        "NatGatewayEipAllocationIdSubnetB": {
+            "Description": "EIP AllocationID to be used by NAT Gateway",
+            "Type": "String",
+            "MinLength": "17",
+            "MaxLength": "17",
+            "AllowedPattern": "eipalloc-(\\w{8})"
+        },
+        "NatGatewayEipAllocationIdSubnetC": {
+            "Description": "EIP AllocationID to be used by NAT Gateway",
+            "Type": "String",
+            "MinLength": "17",
+            "MaxLength": "17",
+            "AllowedPattern": "eipalloc-(\\w{8})"
+        },
+        "WithNetworkStack": {
+            "Default": "yes",
+            "Type": "String",
+            "AllowedPattern": "yes|no"
+        },
+        "WithNatGatewaysStack": {
+            "Default": "yes",
+            "Type": "String",
+            "AllowedPattern": "yes|no"
+        },
+        "WithEcsExternalStack": {
+            "Default": "yes",
+            "Type": "String",
+            "AllowedPattern": "yes|no"
+        },
+        "WithEcsInternalStack": {
+            "Default": "yes",
+            "Type": "String",
+            "AllowedPattern": "yes|no"
+        },
+        "WithExternalServices": {
+            "Default": "yes",
+            "Type": "String",
+            "AllowedPattern": "yes|no"
+        },
+        "WithInternalServices": {
+            "Default": "yes",
+            "Type": "String",
+            "AllowedPattern": "yes|no"
+        },
+        "EcsExternalInstanceType": {
+            "Type": "String",
+            "Description": "ECS EC2 instance type",
+            "Default": "t2.nano",
+            "AllowedValues": [
+                "t2.nano",
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "t2.large",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c4.4xlarge",
+                "c4.8xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "r3.large",
+                "r3.xlarge",
+                "r3.2xlarge",
+                "r3.4xlarge",
+                "r3.8xlarge",
+                "i2.xlarge",
+                "i2.2xlarge",
+                "i2.4xlarge",
+                "i2.8xlarge"
+            ],
+            "ConstraintDescription": "Must be a valid EC2 instance type"
+        },
+        "EcsInternalInstanceType": {
+            "Type": "String",
+            "Description": "ECS EC2 instance type",
+            "Default": "t2.nano",
+            "AllowedValues": [
+                "t2.nano",
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "t2.large",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c4.4xlarge",
+                "c4.8xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "r3.large",
+                "r3.xlarge",
+                "r3.2xlarge",
+                "r3.4xlarge",
+                "r3.8xlarge",
+                "i2.xlarge",
+                "i2.2xlarge",
+                "i2.4xlarge",
+                "i2.8xlarge"
+            ],
+            "ConstraintDescription": "Must be a valid EC2 instance type"
+        },
+        "EcsExternalAutoScalingGroupDesiredCapacity": {
+            "Type": "Number",
+            "Description": "Desired capacity of the ECS External Auto Scaling Group",
+            "Default": "2"
+        },
+        "EcsInternalAutoScalingGroupDesiredCapacity": {
+            "Type": "Number",
+            "Description": "Desired capacity of the ECS Internal Auto Scaling Group",
+            "Default": "2"
+        }
+    },
+    "Conditions": {
+        "WithNetworkStack": {
+            "Fn::Equals": [
+                {
+                    "Ref": "WithNetworkStack"
+                },
+                "yes"
+            ]
+        },
+        "WithNatGatewaysStack": {
+            "Fn::Equals": [
+                {
+                    "Ref": "WithNatGatewaysStack"
+                },
+                "yes"
+            ]
+        },
+        "WithEcsSharedStack": {
+            "Fn::Or": [
+                {
+                    "Condition": "WithEcsExternalStack"
+                },
+                {
+                    "Condition": "WithEcsInternalStack"
+                }
+            ]
+        },
+        "WithEcsExternalStack": {
+            "Fn::And": [
+                {
+                    "Condition": "WithNetworkStack"
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "WithEcsExternalStack"
+                        },
+                        "yes"
+                    ]
+                }
+            ]
+        },
+        "WithEcsInternalStack": {
+            "Fn::And": [
+                {
+                    "Condition": "WithNetworkStack"
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "WithEcsInternalStack"
+                        },
+                        "yes"
+                    ]
+                }
+            ]
+        },
+        "WithExternalServices": {
+            "Fn::And": [
+                {
+                    "Condition": "WithEcsExternalStack"
+                },
+                {
+                    "Condition": "WithInternalServices"
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "WithExternalServices"
+                        },
+                        "yes"
+                    ]
+                }
+            ]
+        },
+        "WithInternalServices": {
+            "Fn::And": [
+                {
+                    "Condition": "WithEcsInternalStack"
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "WithInternalServices"
+                        },
+                        "yes"
+                    ]
+                }
+            ]
+        }
+    },
+    "Resources": {
+        "NetworkStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Condition": "WithNetworkStack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "https://s3-",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            ".amazonaws.com/",
+                            {
+                                "Ref": "CloudFormationTemplatesS3Bucket"
+                            },
+                            "/versions/",
+                            {
+                                "Ref": "CloudFormationVersion"
+                            },
+                            "/network.json"
+                        ]
+                    ]
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "KeyName": {
+                        "Ref": "KeyName"
+                    },
+                    "EnvironmentName": {
+                        "Ref": "EnvironmentName"
+                    },
+                    "CidrPrefix": {
+                        "Ref": "CidrPrefix"
+                    },
+                    "CloudFormationTemplatesS3Bucket": {
+                        "Ref": "CloudFormationTemplatesS3Bucket"
+                    },
+                    "CloudFormationVersion": {
+                        "Ref": "CloudFormationVersion"
+                    },
+                    "WithNatGatewaysStack": {
+                        "Ref": "WithNatGatewaysStack"
+                    },
+                    "NatGatewayEipAllocationIdSubnetA": {
+                        "Ref": "NatGatewayEipAllocationIdSubnetA"
+                    },
+                    "NatGatewayEipAllocationIdSubnetB": {
+                        "Ref": "NatGatewayEipAllocationIdSubnetB"
+                    },
+                    "NatGatewayEipAllocationIdSubnetC": {
+                        "Ref": "NatGatewayEipAllocationIdSubnetC"
+                    }
+                }
+            }
+        },
+        "EcsSharedStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Condition": "WithEcsSharedStack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "https://s3-",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            ".amazonaws.com/",
+                            {
+                                "Ref": "CloudFormationTemplatesS3Bucket"
+                            },
+                            "/versions/",
+                            {
+                                "Ref": "CloudFormationVersion"
+                            },
+                            "/ecs-shared.json"
+                        ]
+                    ]
+                },
+                "TimeoutInMinutes": "60"
+            }
+        },
+        "EcsExternalStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Condition": "WithEcsExternalStack",
+            "DependsOn": [
+                "NetworkStack",
+                "EcsSharedStack"
+            ],
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "https://s3-",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            ".amazonaws.com/",
+                            {
+                                "Ref": "CloudFormationTemplatesS3Bucket"
+                            },
+                            "/versions/",
+                            {
+                                "Ref": "CloudFormationVersion"
+                            },
+                            "/ecs-cluster.json"
+                        ]
+                    ]
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "EnvironmentName": {
+                        "Ref": "EnvironmentName"
+                    },
+                    "ClusterType": "external",
+                    "CidrPrefix": {
+                        "Ref": "CidrPrefix"
+                    },
+                    "KeyName": {
+                        "Ref": "KeyName"
+                    },
+                    "Vpc": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.Vpc"
+                        ]
+                    },
+                    "Name": "external",
+                    "SubnetA": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PublicSubnetA"
+                        ]
+                    },
+                    "SubnetB": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PublicSubnetB"
+                        ]
+                    },
+                    "SubnetC": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PublicSubnetC"
+                        ]
+                    },
+                    "EcsInstanceProfile": {
+                        "Fn::GetAtt": [
+                            "EcsSharedStack",
+                            "Outputs.EcsInstanceProfile"
+                        ]
+                    },
+                    "EcsInstanceType": {
+                        "Ref": "EcsExternalInstanceType"
+                    },
+                    "EcsAutoScalingGroupDesiredCapacity": {
+                        "Ref": "EcsExternalAutoScalingGroupDesiredCapacity"
+                    },
+                    "CloudFormationVersion": {
+                        "Ref": "CloudFormationVersion"
+                    }
+                }
+            }
+        },
+        "EcsInternalStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Condition": "WithEcsInternalStack",
+            "DependsOn": [
+                "NetworkStack",
+                "EcsSharedStack"
+            ],
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "https://s3-",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            ".amazonaws.com/",
+                            {
+                                "Ref": "CloudFormationTemplatesS3Bucket"
+                            },
+                            "/versions/",
+                            {
+                                "Ref": "CloudFormationVersion"
+                            },
+                            "/ecs-cluster.json"
+                        ]
+                    ]
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "EnvironmentName": {
+                        "Ref": "EnvironmentName"
+                    },
+                    "ClusterType": "internal",
+                    "CidrPrefix": {
+                        "Ref": "CidrPrefix"
+                    },
+                    "KeyName": {
+                        "Ref": "KeyName"
+                    },
+                    "Vpc": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.Vpc"
+                        ]
+                    },
+                    "Name": "internal",
+                    "SubnetA": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PrivateSubnetA"
+                        ]
+                    },
+                    "SubnetB": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PrivateSubnetB"
+                        ]
+                    },
+                    "SubnetC": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PrivateSubnetC"
+                        ]
+                    },
+                    "EcsInstanceProfile": {
+                        "Fn::GetAtt": [
+                            "EcsSharedStack",
+                            "Outputs.EcsInstanceProfile"
+                        ]
+                    },
+                    "EcsInstanceType": {
+                        "Ref": "EcsInternalInstanceType"
+                    },
+                    "EcsAutoScalingGroupDesiredCapacity": {
+                        "Ref": "EcsInternalAutoScalingGroupDesiredCapacity"
+                    },
+                    "CloudFormationVersion": {
+                        "Ref": "CloudFormationVersion"
+                    }
+                }
+            }
+        },
+        "EcsInternalBackendOneServiceStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Condition": "WithInternalServices",
+            "DependsOn": [
+                "EcsInternalStack"
+            ],
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "https://s3-",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            ".amazonaws.com/",
+                            {
+                                "Ref": "CloudFormationTemplatesS3Bucket"
+                            },
+                            "/versions/",
+                            {
+                                "Ref": "CloudFormationVersion"
+                            },
+                            "/ecs-service.json"
+                        ]
+                    ]
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "EnvironmentName": {
+                        "Ref": "EnvironmentName"
+                    },
+                    "TierName": "internal",
+                    "CidrPrefix": {
+                        "Ref": "CidrPrefix"
+                    },
+                    "Vpc": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.Vpc"
+                        ]
+                    },
+                    "ServiceName": "backend",
+                    "ServiceImageName": "balmer/ecs-demo-backend-service",
+                    "ServiceImageVersion": {
+                        "Ref": "BackendOneServiceVersion"
+                    },
+                    "EcsDesiredCount": "2",
+                    "EcsMemory": "128",
+                    "PrivatePort": "80",
+                    "PrivateHealthCheckTarget": "HTTP:9080/",
+                    "InstanceMainPort": "9080",
+                    "ContainerMainPort": "80",
+                    "PrivateHostedZone": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PrivateHostedZone"
+                        ]
+                    },
+                    "ExternalEcsInstanceSecurityGroup": {
+                        "Fn::GetAtt": [
+                            "EcsExternalStack",
+                            "Outputs.EcsInstanceSecurityGroup"
+                        ]
+                    },
+                    "InternalEcsInstanceSecurityGroup": {
+                        "Fn::GetAtt": [
+                            "EcsInternalStack",
+                            "Outputs.EcsInstanceSecurityGroup"
+                        ]
+                    },
+                    "SubnetA": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PrivateSubnetA"
+                        ]
+                    },
+                    "SubnetB": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PrivateSubnetB"
+                        ]
+                    },
+                    "SubnetC": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PrivateSubnetC"
+                        ]
+                    },
+                    "EcsServicePolicy": {
+                        "Fn::GetAtt": [
+                            "EcsSharedStack",
+                            "Outputs.EcsServicePolicy"
+                        ]
+                    },
+                    "EcsCluster": {
+                        "Fn::GetAtt": [
+                            "EcsInternalStack",
+                            "Outputs.EcsCluster"
+                        ]
+                    },
+                    "EcsInstanceSecurityGroup": {
+                        "Fn::GetAtt": [
+                            "EcsInternalStack",
+                            "Outputs.EcsInstanceSecurityGroup"
+                        ]
+                    }
+                }
+            }
+        },
+        "EcsExternalFrontedServiceStack": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Condition": "WithExternalServices",
+            "DependsOn": [
+                "EcsExternalStack"
+            ],
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "https://s3-",
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            ".amazonaws.com/",
+                            {
+                                "Ref": "CloudFormationTemplatesS3Bucket"
+                            },
+                            "/versions/",
+                            {
+                                "Ref": "CloudFormationVersion"
+                            },
+                            "/ecs-service.json"
+                        ]
+                    ]
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "EnvironmentName": {
+                        "Ref": "EnvironmentName"
+                    },
+                    "TierName": "external",
+                    "CidrPrefix": {
+                        "Ref": "CidrPrefix"
+                    },
+                    "Vpc": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.Vpc"
+                        ]
+                    },
+                    "ServiceName": "frontend",
+                    "ServiceImageName": "balmer/ecs-demo-frontend-service",
+                    "ServiceImageVersion": {
+                        "Ref": "FrontedServiceVersion"
+                    },
+                    "EcsDesiredCount": "2",
+                    "EcsCpu": "10",
+                    "EcsMemory": "128",
+                    "PublicPort": "80",
+                    "PublicHealthCheckTarget": "HTTP:8080/",
+                    "InstanceMainPort": "8080",
+                    "ContainerMainPort": "80",
+                    "PublicHostedZone": {
+                        "Ref": "PublicHostedZone"
+                    },
+                    "DomainName": {
+                        "Ref": "DomainName"
+                    },
+                    "CustomEnvironmentVariableOneName": "EXAMPLE_INCONTAINER_VARIABLE",
+                    "CustomEnvironmentVariableOneValue": "EXAMPLE_INCONTAINER_VARIABLE_VALUE",
+                    "CustomEnvironmentVariableTwoName": "ANOTHER_EXAMPLE_INCONTAINER_VARIABLE",
+                    "CustomEnvironmentVariableTwoValue": "ANOTHER_EXAMPLE_INCONTAINER_VARIABLE_VALUE",
+                    "ExternalEcsInstanceSecurityGroup": {
+                        "Fn::GetAtt": [
+                            "EcsExternalStack",
+                            "Outputs.EcsInstanceSecurityGroup"
+                        ]
+                    },
+                    "InternalEcsInstanceSecurityGroup": {
+                        "Fn::GetAtt": [
+                            "EcsInternalStack",
+                            "Outputs.EcsInstanceSecurityGroup"
+                        ]
+                    },
+                    "SubnetA": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PublicSubnetA"
+                        ]
+                    },
+                    "SubnetB": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PublicSubnetB"
+                        ]
+                    },
+                    "SubnetC": {
+                        "Fn::GetAtt": [
+                            "NetworkStack",
+                            "Outputs.PublicSubnetC"
+                        ]
+                    },
+                    "EcsServicePolicy": {
+                        "Fn::GetAtt": [
+                            "EcsSharedStack",
+                            "Outputs.EcsServicePolicy"
+                        ]
+                    },
+                    "EcsCluster": {
+                        "Fn::GetAtt": [
+                            "EcsExternalStack",
+                            "Outputs.EcsCluster"
+                        ]
+                    },
+                    "EcsInstanceSecurityGroup": {
+                        "Fn::GetAtt": [
+                            "EcsExternalStack",
+                            "Outputs.EcsInstanceSecurityGroup"
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}
