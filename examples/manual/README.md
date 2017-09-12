@@ -4,10 +4,10 @@ In AWS Console go to EC2 Container Service, click _Create Cluster_, call it "Ecs
 # 2. Add ECS instance to the ECS Cluster
 
 ## 1. Create an IAM role for EC2 instance
-  1. Go to IAM > Roles > Create role. Name it "EcsInstanceRole"
-  2. Select Role Type: "Amazon EC2 Role for EC2 Container Service"
-  3. Choose "AmazonEC2ContainerServiceforEC2Role" policy
-  4. Review and finish the Role creation
+  1. Go to IAM > Roles > Create role. 
+  2. Select EC2 Container Service
+  3. Select your use case: "Amazon EC2 Role for EC2 Container Service"
+  4. Name the role "EcsInstanceRole"
 
 ## 2. Create Security Groups for ECS instances and ELBs.
   1. Create SG named "EcsInstanceSecurityGroup". Make sure ports _inbound tcp ports 22 and 8080_ are opened to _Anywhere(0.0.0.0/0)_
@@ -113,6 +113,7 @@ echo "ECS_LOGLEVEL=warn" >> /etc/ecs/ecs.config
     Task Definition: EcsTaskDefinitionDemo:1
     Service name: NginxContainer
     Number of tasks: 1
+    Task Placement: AZ Balanced Spread
     ```
 
   4. Click Configure ELB > Chose Classic ELB
@@ -122,7 +123,8 @@ echo "ECS_LOGLEVEL=warn" >> /etc/ecs/ecs.config
     Select IAM role for service "EcsServiceRole"
     ```
     
-  5. Click Save > click Create Service
+  5. Auto Scaling > Do not adjust the service’s desired count
+  6. Click Save > click Create Service
 
 Open _NginxContainer_ service. Check if _Running tasks = 1_.
 
